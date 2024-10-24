@@ -1,6 +1,7 @@
 -- xalux warehouse --
 
-downloading:
+showcase:
+https://youtu.be/x2ANFCcBg9w
 
 configure config.lua
 add your webhook
