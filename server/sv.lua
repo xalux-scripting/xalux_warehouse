@@ -45,7 +45,7 @@ AddEventHandler('warehouse:buy', function(warehouseIndex, warehouseName, warehou
     local src = source
     local warehouse = Config.Warehouses[warehouseIndex]
     local discordId = getPlayerIdentifiers(src)
-    local Owner = GetPlayerName(src) 
+    local playerName = GetPlayerName(src) 
 
 
     if not warehouseName or warehouseName == "" then
