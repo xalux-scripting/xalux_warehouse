@@ -27,4 +27,4 @@ Config.stashes = {
 
 
 -- discord logs
-Config.Webhook = 'https://discord.com/api/webhooks/1290640278578794559/HSsPkKylDfQ7459fxLS4nFzrrtYHqFHOQaV9h55oxomngU09djKNFMr-PqjR0ULOzL_W'
+Config.Webhook = 'change me'
