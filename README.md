@@ -7,6 +7,7 @@ configure config.lua
 add your webhook
 ensure script on server.cfg
 make sure depencies are ensured first
+import the sql file
 
 depencies:
 oxmysql
