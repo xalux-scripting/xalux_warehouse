@@ -1,7 +1,7 @@
 -- xalux warehouse --
 
 showcase:
-[[https://youtu.be/x2ANFCcBg9w](https://youtu.be/vQlrd51gBK4)](https://youtu.be/vQlrd51gBK4)](https://youtu.be/vQlrd51gBK4)
+https://youtu.be/vQlrd51gBK4
 
 configure config.lua.
 add your webhook.
