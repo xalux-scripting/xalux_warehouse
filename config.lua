@@ -21,10 +21,22 @@ Config.Warehouses = {
 }
 
 Config.stashes = {
-    slots = 100,       -- set the number of slots to the stashes
-    maxWeight = 1000000  -- set max weight for the stashes if you set 1000 it 1kg because the last tree numbers are grams. Default it set to 1000kg
+    defaultSlots = 50,      -- Default stash slots
+    defaultWeight = 50000   -- Default stash max weight in grams
+}
+
+Config.upgradeCosts = {
+    slotCost = 1000,  -- Cost per slot
+    weightCost = 500  -- Cost per 1kg (1000g) of weight
 }
 
 
+
+
+
+
 -- discord logs
-Config.Webhook = 'change me'
+Config.Webhook = 'change-me' -- add your discord webhook
+Config.BotToken = 'change-me' -- add your bot token
+
+Config.sellpros = 0.25 -- precentage the people lose when selling
