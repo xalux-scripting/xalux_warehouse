@@ -5,6 +5,7 @@ showcase:
 
 configure config.lua.
 add your webhook.
+add your bot token.
 ensure script on server.cfg.
 make sure depencies are ensured first.
 import the sql file
