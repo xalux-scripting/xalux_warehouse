@@ -1,11 +1,8 @@
-
-
 local Config = Config or {}
 local insideWarehouse = false
 local leaveTarget = nil  
 local changePinTarget = nil  
-local stashTarget = nil  
-
+local stashTarget = nil
 
 local function addTargetZone(coords, radius, name, label, icon, onSelect)
     exports.ox_target:addSphereZone({
@@ -57,10 +54,122 @@ Citizen.CreateThread(function()
     end
 end)
 
+local function handleUpgrade(warehouseId, upgradeType)
+    local prices = {
+        slots = Config.upgradeCosts.slotCost,  
+        weight = Config.upgradeCosts.weightCost   
+    }
+
+    local input = lib.inputDialog('Upgrade Warehouse', {
+        {label = 'How much to upgrade?', type = 'number', placeholder = 'Enter amount...'}
+    })
+
+    if input and tonumber(input[1]) then
+        local upgradeAmount = tonumber(input[1])
+        local upgradeCost
+
+        if upgradeType == 'slots' then
+            upgradeCost = upgradeAmount * prices.slots
+        elseif upgradeType == 'weight' then
+            upgradeCost = upgradeAmount * prices.weight
+        end
+
+        local confirm = lib.alertDialog({
+            header = 'Confirm Upgrade',
+            content = ('Upgrade %s by %d for $%d?'):format(upgradeType, upgradeAmount, upgradeCost),
+            centered = true,
+            cancel = true
+        })
+
+        if confirm == 'confirm' then
+            TriggerServerEvent('warehouse:upgradeStash', warehouseId, upgradeType, upgradeAmount, upgradeCost)
+        else
+            lib.notify({type = 'inform', description = 'Upgrade canceled.'})
+        end
+    else
+        lib.notify({type = 'error', description = 'Invalid input. Please enter a valid number.'})
+    end
+end
+
+local function openOwnerManagementMenu(warehouseId)
+    lib.registerContext({
+        id = 'warehouse_owner_management',
+        title = 'Warehouse Management',
+        options = {
+            {
+                title = 'Upgrade Warehouse',
+                description = 'Upgrade stash capacity or weight',
+                icon = 'fa-solid fa-arrow-up',
+                onSelect = function()
+                    lib.registerContext({
+                        id = 'warehouse_upgrade_menu',
+                        title = 'Upgrade Options',
+                        options = {
+                            {
+                                title = 'Upgrade Slots',
+                                description = 'Increase stash slots',
+                                icon = 'fa-solid fa-box-open',
+                                onSelect = function()
+                                    handleUpgrade(warehouseId, 'slots')
+                                end
+                            },
+                            {
+                                title = 'Upgrade Weight',
+                                description = 'Increase stash weight',
+                                icon = 'fa-solid fa-weight-hanging',
+                                onSelect = function()
+                                    handleUpgrade(warehouseId, 'weight')
+                                end
+                            }
+                        }
+                    })
+                    lib.showContext('warehouse_upgrade_menu')
+                end
+            },
+            {
+                title = 'Change Pincode',
+                description = 'Change warehouse access code',
+                icon = 'fa-solid fa-key',
+                onSelect = function()
+                    local input = lib.inputDialog('Change Warehouse Pincode', {
+                        {label = 'New Access Code', type = 'input', placeholder = 'Enter a new 4-digit code...', password = true}
+                    })
+                    if input then
+                        local newCode = input[1]
+                        TriggerServerEvent('warehouse:changePin', warehouseId, newCode)
+                    end
+                end
+            },
+            {
+                title = 'Sell the warehouse',
+                description = 'sell the warehouse',
+                icon = 'fa-solid fa-key',
+                onSelect = function()
+                    local maara = Config.sellpros * 100
+                    local confirm = lib.alertDialog({
+                        header = 'Confirm sell',
+                        content = ('sell the warehouse you lose %s from the orginal price'):format(maara),
+                        centered = true,
+                        cancel = true
+                    })
+                    if confirm == 'confirm' then
+                        TriggerServerEvent('warehouse:sell')
+                    else
+                        lib.notify({type = 'inform', description = 'Sell canceled.'})
+                    end
+                end
+            }
+        }
+    })
+    lib.showContext('warehouse_owner_management')
+end
+
+
 RegisterNetEvent('warehouse:teleportInside')
 AddEventHandler('warehouse:teleportInside', function(warehouseId, isOwner)
     SetEntityCoords(PlayerPedId(), 1048.12, -3096.97, -39.0, false, false, false, true)
     insideWarehouse = true
+
     if leaveTarget then exports.ox_target:removeZone(leaveTarget) leaveTarget = nil end
     if changePinTarget then exports.ox_target:removeZone(changePinTarget) changePinTarget = nil end
     if stashTarget then exports.ox_target:removeZone(stashTarget) stashTarget = nil end
@@ -88,17 +197,11 @@ AddEventHandler('warehouse:teleportInside', function(warehouseId, isOwner)
             debugPoly = false,
             options = {
                 {
-                    name = 'changePin',
-                    label = "Change Pincode",
-                    icon = 'fa-solid fa-key',
+                    name = 'manageWarehouse',
+                    label = "Manage Warehouse",
+                    icon = 'fa-solid fa-cogs',
                     onSelect = function()
-                        local input = lib.inputDialog('Change Warehouse Pincode', {
-                            {label = 'New Access Code', type = 'input', placeholder = 'Enter a new 4-digit code...'}
-                        })
-                        if input then
-                            local newCode = input[1]
-                            TriggerServerEvent('warehouse:changePin', warehouseId, newCode)
-                        end
+                        openOwnerManagementMenu(warehouseId)
                     end
                 }
             }
@@ -127,8 +230,10 @@ AddEventHandler('warehouse:teleportOutside', function(originalPos)
     SetEntityCoords(PlayerPedId(), originalPos.x, originalPos.y, originalPos.z, false, false, false, true)
     insideWarehouse = false
 
-
     if leaveTarget then exports.ox_target:removeZone(leaveTarget) leaveTarget = nil end
     if changePinTarget then exports.ox_target:removeZone(changePinTarget) changePinTarget = nil end
     if stashTarget then exports.ox_target:removeZone(stashTarget) stashTarget = nil end
 end)
+
+
+
