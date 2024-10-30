@@ -96,31 +96,30 @@ end
 RegisterNetEvent('warehouse:buy')
 AddEventHandler('warehouse:buy', function(warehouseIndex, warehouseName, warehouseCode)
     local src = source
-    local warehouse = Config.Warehouses[warehouseIndex]
-    local steamId = getSteamIdentifier(src)
     local playerName = GetPlayerName(src)
+    local steamId = getSteamIdentifier(src)
+    local warehouse = Config.Warehouses[warehouseIndex]
 
     getDiscordIdentifierAndTag(src, function(discordId, discordTag)
         if not warehouseName or warehouseName == "" then
             TriggerClientEvent('ox_lib:notify', src, {title = 'Error', description = 'Invalid warehouse name!', type = 'error'})
             return
         end
-
-        if not warehouseCode or warehouseCode == "" or #warehouseCode ~= 4 then
+        if not warehouseCode or #warehouseCode ~= 4 then
             TriggerClientEvent('ox_lib:notify', src, {title = 'Error', description = 'Invalid access code! Must be 4 digits.', type = 'error'})
             return
         end
 
         local existingWarehouse = MySQL.query.await('SELECT `name` FROM `warehouses` WHERE `name` = ?', {warehouseName})
         if existingWarehouse[1] then
-            TriggerClientEvent('ox_lib:notify', src, {title = 'Error', description = 'A warehouse with this name already exists!', type = 'error'})
+            TriggerClientEvent('ox_lib:notify', src, {title = 'Error', description = 'Warehouse name already taken!', type = 'error'})
             return
         end
 
         local money = exports.ox_inventory:GetItem(src, 'money')
         local warehousePrice = warehouse.price
         if not money or money.count < warehousePrice then
-            TriggerClientEvent('ox_lib:notify', src, {title = 'Error', description = 'Insufficient money to buy this warehouse!', type = 'error'})
+            TriggerClientEvent('ox_lib:notify', src, {title = 'Error', description = 'Insufficient funds to buy the warehouse!', type = 'error'})
             return
         end
 
@@ -132,14 +131,12 @@ AddEventHandler('warehouse:buy', function(warehouseIndex, warehouseName, warehou
         })
 
         exports.ox_inventory:RegisterStash('warehouse_' .. warehouseId, warehouseName, Config.stashes.defaultSlots, Config.stashes.defaultWeight, playerName)
-
         TriggerClientEvent('ox_lib:notify', src, {title = 'Success', description = 'You bought the warehouse: ' .. warehouseName, type = 'success'})
         TriggerClientEvent('warehouse:setupStashTarget', src, warehouse.coords, warehouseId)
 
         local discordDisplay = discordTag or "Unknown"
         local mention = discordId and ("<@" .. discordId .. ">") or "Unknown"
-        
-        sendToDiscord("Warehouse Purchase", ("**Player Steam Name:** %s\n**Discord:** %s\n**Warehouse Name:** %s\n**Price:** $%d"):format(playerName, mention, warehouseName, warehousePrice), 3447003)
+        sendToDiscord("Warehouse Purchase", ("**Player:** %s\n**Discord:** %s\n**Warehouse Name:** %s\n**Price:** $%d"):format(playerName, mention, warehouseName, warehousePrice), 3447003)
     end)
 end)
 
@@ -334,5 +331,64 @@ AddEventHandler('warehouse:sell', function()
         TriggerEvent('warehouse:leave', src)
     end)
 end)
+RegisterNetEvent('warehouse:rent')
+AddEventHandler('warehouse:rent', function(warehouseIndex, warehouseName, warehouseCode, rentDays)
+    local src = source
+    local playerName = GetPlayerName(src)
+    local steamId = getSteamIdentifier(src)
+    local warehouse = Config.Warehouses[warehouseIndex]
+
+    getDiscordIdentifierAndTag(src, function(discordId, discordTag)
+        if not warehouseName or warehouseName == "" then
+            TriggerClientEvent('ox_lib:notify', src, {title = 'Error', description = 'Invalid warehouse name!', type = 'error'})
+            return
+        end
+        if not warehouseCode or #warehouseCode ~= 4 then
+            TriggerClientEvent('ox_lib:notify', src, {title = 'Error', description = 'Access code must be 4 digits!', type = 'error'})
+            return
+        end
+
+        local rentCost = rentDays * Config.DailyRentCost
+        local money = exports.ox_inventory:GetItem(src, 'money')
+        if not money or money.count < rentCost then
+            TriggerClientEvent('ox_lib:notify', src, {title = 'Error', description = 'Insufficient funds! You need $' .. rentCost, type = 'error'})
+            return
+        end
+
+        -- Check if a warehouse with the specified name already exists
+        local existingWarehouse = MySQL.query.await('SELECT * FROM `warehouses` WHERE name = ?', {warehouseName})
+        if existingWarehouse[1] then
+            TriggerClientEvent('ox_lib:notify', src, {title = 'Error', description = 'A warehouse with this name already exists! Choose a different name.', type = 'error'})
+            return
+        end
+
+        -- Deduct money and proceed with renting
+        exports.ox_inventory:RemoveItem(src, 'money', rentCost)
+        local rentEndDate = os.date('%Y-%m-%d %H:%M:%S', os.time() + (rentDays * 86400))
+        local warehouseId = generateUniqueWarehouseId()
+
+        -- Insert new warehouse rental record
+        local insertId = MySQL.insert.await('INSERT INTO `warehouses` (name, is_rented, rent_time, owner, steam_id, code, warehouse_id, location, entry_coords) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', {
+            warehouseName, true, rentEndDate, playerName, steamId, warehouseCode, warehouseId, json.encode(warehouse.coords), json.encode(warehouse.coords) -- Assuming `coords` is used for both location and entry_coords
+        })
+        
+
+        if insertId then
+            exports.ox_inventory:RegisterStash('warehouse_' .. warehouseId, warehouseName, Config.stashes.defaultSlots, Config.stashes.defaultWeight, playerName)
+            TriggerClientEvent('ox_lib:notify', src, {title = 'Success', description = 'Warehouse rented for ' .. rentDays .. ' days at $' .. rentCost, type = 'success'})
+            TriggerClientEvent('warehouse:setupStashTarget', src, warehouse.coords, warehouseId)
+
+            local discordDisplay = discordTag or "Unknown"
+            local mention = discordId and ("<@" .. discordId .. ">") or "Unknown"
+            sendToDiscord("Warehouse Rental", ("**Player:** %s\n**Discord:** %s\n**Warehouse Name:** %s\n**Rental Period:** %d days\n**Total Cost:** $%d\n**Access Code:** %s\n**Warehouse ID:** %d"):format(playerName, mention, warehouseName, rentDays, rentCost, warehouseCode, warehouseId), 3066993)
+        else
+            -- Refund if insertion fails
+            exports.ox_inventory:AddItem(src, 'money', rentCost)
+            TriggerClientEvent('ox_lib:notify', src, {title = 'Error', description = 'Failed to rent the warehouse, please try again later.', type = 'error'})
+        end
+    end)
+end)
+
+
 
 
