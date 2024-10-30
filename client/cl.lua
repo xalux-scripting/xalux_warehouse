@@ -27,7 +27,7 @@ Citizen.CreateThread(function()
         addTargetZone(warehouse.coords, 1.5, 'buyWarehouse_' .. index, "Buy Warehouse - $" .. warehouse.price, 'fa-solid fa-dollar-sign', function()
             local input = lib.inputDialog('Buy Warehouse', {
                 {label = 'Warehouse Name', type = 'input', placeholder = 'Enter a name for the warehouse...'},
-                {label = 'Access Code', type = 'input', placeholder = 'Enter a 4-digit code for the warehouse...'}
+                {label = 'Access Code', type = 'input', placeholder = 'Enter a 4-digit code for the warehouse...', min = 4, max = 4}
             })
 
             if input then
@@ -36,7 +36,25 @@ Citizen.CreateThread(function()
                 TriggerServerEvent('warehouse:buy', index, name, code)
             end
         end)
+        addTargetZone(warehouse.coords, 1.5, 'rentWarehouse_' .. index, "Rent Warehouse - $" .. Config.DailyRentCost .. " per day", 'fa-solid fa-dollar-sign', function()
+            local rentalInput = lib.inputDialog('Rent Warehouse', {
+                {label = 'Warehouse Name', type = 'input', placeholder = 'Enter a name for the warehouse...'},
+                {label = 'Access Code', type = 'input', placeholder = 'Enter a 4-digit code...', min = 4, max = 4},
+                {label = 'Number of Days', type = 'number', placeholder = 'Enter days to rent (max 365)...', min = 1, max = 365}
+            })
 
+            if rentalInput then
+                local name = rentalInput[1]
+                local code = rentalInput[2]
+                local days = tonumber(rentalInput[3])
+
+                if name and code and days and days > 0 then
+                    TriggerServerEvent('warehouse:rent', index, name, code, days)
+                else
+                    lib.notify({title = 'Error', description = 'Please enter valid inputs for all fields.', type = 'error'})
+                end
+            end
+        end)
         addTargetZone(warehouse.coords, 1.5, 'enterWarehouse_' .. index, "Enter Warehouse", 'fa-solid fa-door-open', function()
             local playerCoords = GetEntityCoords(PlayerPedId())
 
@@ -90,7 +108,6 @@ local function handleUpgrade(warehouseId, upgradeType)
         lib.notify({type = 'error', description = 'Invalid input. Please enter a valid number.'})
     end
 end
-
 local function openOwnerManagementMenu(warehouseId)
     lib.registerContext({
         id = 'warehouse_owner_management',
@@ -165,6 +182,10 @@ local function openOwnerManagementMenu(warehouseId)
 end
 
 
+
+
+
+
 RegisterNetEvent('warehouse:teleportInside')
 AddEventHandler('warehouse:teleportInside', function(warehouseId, isOwner)
     SetEntityCoords(PlayerPedId(), 1048.12, -3096.97, -39.0, false, false, false, true)
@@ -234,6 +255,3 @@ AddEventHandler('warehouse:teleportOutside', function(originalPos)
     if changePinTarget then exports.ox_target:removeZone(changePinTarget) changePinTarget = nil end
     if stashTarget then exports.ox_target:removeZone(stashTarget) stashTarget = nil end
 end)
-
-
-
