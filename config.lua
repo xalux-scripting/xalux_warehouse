@@ -29,14 +29,11 @@ Config.upgradeCosts = {
     slotCost = 1000,  -- Cost per slot
     weightCost = 500  -- Cost per 1kg (1000g) of weight
 }
-
-
-
-
+Config.DailyRentCost = 500 -- Set the daily rental cost 
 
 
 -- discord logs
-Config.Webhook = 'change-me' -- add your discord webhook
-Config.BotToken = 'change-me' -- add your bot token
+Config.Webhook = ''
+Config.BotToken = ''
 
 Config.sellpros = 0.25 -- precentage the people lose when selling
