@@ -29,7 +29,6 @@ Config.upgradeCosts = {
     slotCost = 1000,  -- Cost per slot
     weightCost = 500  -- Cost per 1kg (1000g) of weight
 }
-Config.DailyRentCost = 500 -- Set the daily rental cost 
 
 
 -- discord logs
