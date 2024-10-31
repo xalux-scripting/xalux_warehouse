@@ -12,8 +12,6 @@ CREATE TABLE IF NOT EXISTS `warehouses` (
   `max_slots` int(11) DEFAULT 50,
   `max_weight` int(11) DEFAULT 50000,
   `original_price` int(11) NOT NULL DEFAULT 0,
-  `is_rented` tinyint(1) DEFAULT 0,
-  `rent_time` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `warehouse_id_UNIQUE` (`warehouse_id`),
   UNIQUE KEY `name_UNIQUE` (`name`)
