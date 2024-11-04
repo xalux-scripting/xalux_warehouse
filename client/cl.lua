@@ -190,23 +190,24 @@ AddEventHandler('warehouse:teleportInside', function(warehouseId, isOwner)
         }
     })
 
-    if isOwner then
-        changePinTarget = exports.ox_target:addSphereZone({
-            coords = vec3(1049.0280, -3100.6545, -39.0287), 
-            radius = 1.5,
-            debugPoly = false,
-            options = {
-                {
-                    name = 'manageWarehouse',
-                    label = "Manage Warehouse",
-                    icon = 'fa-solid fa-cogs',
-                    onSelect = function()
-                        openOwnerManagementMenu(warehouseId)
-                    end
-                }
+    changePinTarget = exports.ox_target:addSphereZone({
+        coords = vec3(1049.0280, -3100.6545, -39.0287), 
+        radius = 1.5,
+        debugPoly = false,
+        options = {
+            {
+                name = 'manageWarehouse',
+                label = "Manage Warehouse",
+                icon = 'fa-solid fa-cogs',
+                canInteract = function()
+                    return isOwner  -- Return true if the player is the owner, otherwise false
+                end,
+                onSelect = function()
+                    openOwnerManagementMenu(warehouseId)
+                end
             }
-        })
-    end
+        }
+    })
 
     stashTarget = exports.ox_target:addSphereZone({
         coords = vec3(1052.7151, -3100.8760, -39.0000), 
