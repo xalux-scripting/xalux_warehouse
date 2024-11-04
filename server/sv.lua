@@ -203,7 +203,6 @@ AddEventHandler('warehouse:enter', function(warehouseName, enteredCode, playerCo
             if distance <= 5.0 then
                 local warehouseId = result[1].warehouse_id
                 local isOwner = (result[1].steam_id == steamId)
-                print(isOwner)
                 playerLocations[src] = playerCoords
 
 
