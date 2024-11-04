@@ -195,14 +195,15 @@ end)
 RegisterNetEvent('warehouse:enter')
 AddEventHandler('warehouse:enter', function(warehouseName, enteredCode, playerCoords)
     local src = source
-    MySQL.query('SELECT `code`, `warehouse_id`, `owner`, `location` FROM `warehouses` WHERE `name` = ? AND `code` = ?', {warehouseName, enteredCode}, function(result)
+    local steamId = getSteamIdentifier(src)
+    MySQL.query('SELECT `code`, `warehouse_id`, `steam_id`, `location` FROM `warehouses` WHERE `name` = ? AND `code` = ?', {warehouseName, enteredCode}, function(result)
         if result[1] then
             local entryCoords = json.decode(result[1].location)
             local distance = #(playerCoords - vec3(entryCoords.x, entryCoords.y, entryCoords.z))
             if distance <= 5.0 then
                 local warehouseId = result[1].warehouse_id
-                local isOwner = (result[1].owner == GetPlayerName(src))
-
+                local isOwner = (result[1].steam_id == steamId)
+                print(isOwner)
                 playerLocations[src] = playerCoords
 
 
