@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS `warehouses` (
   `code` varchar(4) NOT NULL,
   `location` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`location`)),
   `warehouse_id` int(11) NOT NULL,
-  `entry_coords` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`entry_coords`)),
   `max_slots` int(11) DEFAULT 50,
   `max_weight` int(11) DEFAULT 50000,
   `original_price` int(11) NOT NULL DEFAULT 0,
