@@ -124,8 +124,8 @@ AddEventHandler('warehouse:buy', function(warehouseIndex, warehouseName, warehou
         exports.ox_inventory:RemoveItem(src, 'money', warehousePrice)
         local warehouseId = generateUniqueWarehouseId()
 
-        MySQL.insert.await('INSERT INTO `warehouses` (owner, steam_id, name, code, location, warehouse_id, entry_coords, max_slots, max_weight, discord, original_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', {
-            playerName, steamId, warehouseName, warehouseCode, json.encode(warehouse.coords), warehouseId, json.encode(warehouse.coords), Config.stashes.defaultSlots, Config.stashes.defaultWeight, discordId, warehousePrice
+        MySQL.insert.await('INSERT INTO `warehouses` (owner, steam_id, name, code, location, warehouse_id, max_slots, max_weight, discord, original_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', {
+            playerName, steamId, warehouseName, warehouseCode, json.encode(warehouse.coords), warehouseId, Config.stashes.defaultSlots, Config.stashes.defaultWeight, discordId, warehousePrice
         })
 
         exports.ox_inventory:RegisterStash('warehouse_' .. warehouseId, warehouseName, Config.stashes.defaultSlots, Config.stashes.defaultWeight, playerName)
@@ -195,9 +195,9 @@ end)
 RegisterNetEvent('warehouse:enter')
 AddEventHandler('warehouse:enter', function(warehouseName, enteredCode, playerCoords)
     local src = source
-    MySQL.query('SELECT `code`, `warehouse_id`, `owner`, `entry_coords` FROM `warehouses` WHERE `name` = ? AND `code` = ?', {warehouseName, enteredCode}, function(result)
+    MySQL.query('SELECT `code`, `warehouse_id`, `owner`, `location` FROM `warehouses` WHERE `name` = ? AND `code` = ?', {warehouseName, enteredCode}, function(result)
         if result[1] then
-            local entryCoords = json.decode(result[1].entry_coords)
+            local entryCoords = json.decode(result[1].location)
             local distance = #(playerCoords - vec3(entryCoords.x, entryCoords.y, entryCoords.z))
             if distance <= 5.0 then
                 local warehouseId = result[1].warehouse_id
