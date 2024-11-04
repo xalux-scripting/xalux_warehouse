@@ -200,7 +200,7 @@ AddEventHandler('warehouse:teleportInside', function(warehouseId, isOwner)
                 label = "Manage Warehouse",
                 icon = 'fa-solid fa-cogs',
                 canInteract = function()
-                    return isOwner  -- Return true if the player is the owner, otherwise false
+                    return isOwner  
                 end,
                 onSelect = function()
                     openOwnerManagementMenu(warehouseId)
