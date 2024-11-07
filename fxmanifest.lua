@@ -13,20 +13,18 @@ dependencies {
     'oxmysql' 
 }
 
-
 shared_scripts {
     '@ox_lib/init.lua', 
     'config.lua',       
 
-
 }
 
 client_scripts {
-    'cl.lua',       
+    'client/cl.lua',       
 }
 
 -- Server scripts
 server_scripts {
     '@mysql-async/lib/MySQL.lua', 
-    'sv.lua',                
+    'server/sv.lua',                
 }
