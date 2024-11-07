@@ -22,11 +22,11 @@ shared_scripts {
 }
 
 client_scripts {
-    'cl.lua',       
+    'client/cl.lua',       
 }
 
 -- Server scripts
 server_scripts {
     '@mysql-async/lib/MySQL.lua', 
-    'sv.lua',                
+    'server/sv.lua',                
 }
