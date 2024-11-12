@@ -1,4 +1,3 @@
-
 CREATE TABLE IF NOT EXISTS `warehouses` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `owner` varchar(100) NOT NULL,
@@ -11,9 +10,8 @@ CREATE TABLE IF NOT EXISTS `warehouses` (
   `max_slots` int(11) DEFAULT 50,
   `max_weight` int(11) DEFAULT 50000,
   `original_price` int(11) NOT NULL DEFAULT 0,
+  `purchase_count` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `warehouse_id_UNIQUE` (`warehouse_id`),
   UNIQUE KEY `name_UNIQUE` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=45 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
-
-
+) ENGINE=InnoDB AUTO_INCREMENT=89 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
