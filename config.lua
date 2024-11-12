@@ -16,19 +16,36 @@ Config.Warehouses = {
         price = 75000,
 
     },
-    --you can add more if needed
-   
+
+}
+Config.Blips = {
+    enabled = true,         -- Set to false to disable blips for warehouses
+    blipId = 473,           -- Default blip icon ID for warehouses
+    blipColor = 3,          -- Blip color (use numbers from GTA color chart)
+    blipName = "Warehouse"  -- Display name for warehouse blips
 }
 
+Config.maxPurchases = 6 -- max amount warehouses players can buy in one location
+
+
+
+
+Config.Props = {
+    {
+        model = "prop_boxpile_07d",    -- prop model 
+        coords = vector3(1053.2159, -3102.4148, -40.00000), -- vec3 coords
+        heading = 270.0              -- prop heading
+    },
+}
 Config.stashes = {
-    defaultSlots = 50,      -- Default stash slots
-    defaultWeight = 50000   -- Default stash max weight in grams
-}
-
-Config.upgradeCosts = {
+    defaultSlots = 50,          -- Default slots for a new warehouse
+    defaultWeight = 50000,      -- Default weight in grams for a new warehouse (50 kg)
+    maxSlots = 200,             -- Maximum slots allowed for upgrade
+    maxWeight = 200000,          -- Maximum weight allowed for upgrade (200 kg by default)
     slotCost = 1000,  -- Cost per slot
     weightCost = 500  -- Cost per 1kg (1000g) of weight
 }
+
 
 
 -- discord logs
