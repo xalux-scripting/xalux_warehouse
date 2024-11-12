@@ -108,34 +108,104 @@ AddEventHandler('warehouse:buy', function(warehouseIndex, warehouseName, warehou
             return
         end
 
-        local existingWarehouse = MySQL.query.await('SELECT `name` FROM `warehouses` WHERE `name` = ?', {warehouseName})
-        if existingWarehouse[1] then
-            TriggerClientEvent('ox_lib:notify', src, {title = 'Error', description = 'Warehouse name already taken!', type = 'error'})
-            return
-        end
-
         local money = exports.ox_inventory:GetItem(src, 'money')
         local warehousePrice = warehouse.price
         if not money or money.count < warehousePrice then
-            TriggerClientEvent('ox_lib:notify', src, {title = 'Error', description = 'Insufficient funds to buy the warehouse!', type = 'error'})
+            TriggerClientEvent('ox_lib:notify', src, {title = 'Error', description = 'Insufficient funds to buy the warehouse! You need $' .. warehousePrice, type = 'error'})
             return
         end
 
-        exports.ox_inventory:RemoveItem(src, 'money', warehousePrice)
-        local warehouseId = generateUniqueWarehouseId()
+        local existingWarehouses = MySQL.query.await('SELECT `id`, `purchase_count` FROM `warehouses` WHERE `location` = ?', {json.encode(warehouse.coords)})
 
-        MySQL.insert.await('INSERT INTO `warehouses` (owner, steam_id, name, code, location, warehouse_id, max_slots, max_weight, discord, original_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', {
-            playerName, steamId, warehouseName, warehouseCode, json.encode(warehouse.coords), warehouseId, Config.stashes.defaultSlots, Config.stashes.defaultWeight, discordId, warehousePrice
-        })
+        if #existingWarehouses > 0 then
+            local warehouseData = existingWarehouses[1]
+            if warehouseData.purchase_count >= Config.maxPurchases then
+                TriggerClientEvent('ox_lib:notify', src, {title = 'Error', description = 'This warehouse has reached the maximum purchase limit', type = 'error'})
+                return
+            end
 
-        exports.ox_inventory:RegisterStash('warehouse_' .. warehouseId, warehouseName, Config.stashes.defaultSlots, Config.stashes.defaultWeight, playerName)
-        TriggerClientEvent('ox_lib:notify', src, {title = 'Success', description = 'You bought the warehouse: ' .. warehouseName, type = 'success'})
-        TriggerClientEvent('warehouse:setupStashTarget', src, warehouse.coords, warehouseId)
+            exports.ox_inventory:RemoveItem(src, 'money', warehousePrice)
 
+            MySQL.update.await('UPDATE `warehouses` SET `purchase_count` = `purchase_count` + 1 WHERE `id` = ?', {warehouseData.id})
+
+
+            local newWarehouseId = generateUniqueWarehouseId()
+            MySQL.insert.await('INSERT INTO `warehouses` (owner, steam_id, name, code, location, warehouse_id, max_slots, max_weight, discord, original_price, purchase_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', {
+                playerName, steamId, warehouseName, warehouseCode, json.encode(warehouse.coords), newWarehouseId, Config.stashes.defaultSlots, Config.stashes.defaultWeight, discordId, warehousePrice, warehouseData.purchase_count + 1
+            })
+
+            exports.ox_inventory:RegisterStash('warehouse_' .. newWarehouseId, warehouseName, Config.stashes.defaultSlots, Config.stashes.defaultWeight, playerName)
+
+            TriggerClientEvent('ox_lib:notify', src, {title = 'Success', description = 'You bought the warehouse: ' .. warehouseName, type = 'success'})
+            TriggerClientEvent('warehouse:setupStashTarget', src, warehouse.coords, newWarehouseId)
+        else
+            exports.ox_inventory:RemoveItem(src, 'money', warehousePrice)
+
+            local warehouseId = generateUniqueWarehouseId()
+            MySQL.insert.await('INSERT INTO `warehouses` (owner, steam_id, name, code, location, warehouse_id, max_slots, max_weight, discord, original_price, purchase_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', {
+                playerName, steamId, warehouseName, warehouseCode, json.encode(warehouse.coords), warehouseId, Config.stashes.defaultSlots, Config.stashes.defaultWeight, discordId, warehousePrice, 1
+            })
+
+            exports.ox_inventory:RegisterStash('warehouse_' .. warehouseId, warehouseName, Config.stashes.defaultSlots, Config.stashes.defaultWeight, playerName)
+
+            TriggerClientEvent('ox_lib:notify', src, {title = 'Success', description = 'You bought the warehouse: ' .. warehouseName, type = 'success'})
+            TriggerClientEvent('warehouse:setupStashTarget', src, warehouse.coords, warehouseId)
+        end
         local discordDisplay = discordTag or "Unknown"
         local mention = discordId and ("<@" .. discordId .. ">") or "Unknown"
         sendToDiscord("Warehouse Purchase", ("**Player:** %s\n**Discord:** %s\n**Warehouse Name:** %s\n**Price:** $%d"):format(playerName, mention, warehouseName, warehousePrice), 3447003)
     end)
+end)
+
+RegisterNetEvent('warehouse:requestUpgradeInfo')
+AddEventHandler('warehouse:requestUpgradeInfo', function(warehouseId, upgradeType)
+    local src = source
+    local warehouse = MySQL.query.await('SELECT `max_slots`, `max_weight` FROM `warehouses` WHERE `warehouse_id` = ?', {warehouseId})
+    if warehouse[1] then
+        TriggerClientEvent('warehouse:receiveUpgradeInfo', src, warehouse[1].max_slots, warehouse[1].max_weight)
+    else
+        TriggerClientEvent('ox_lib:notify', src, {type = 'error', description = 'Warehouse not found.'})
+    end
+end)
+
+RegisterNetEvent('warehouse:processUpgrade')
+AddEventHandler('warehouse:processUpgrade', function(warehouseId, upgradeType, upgradeAmount, upgradeCost)
+    local src = source
+    local playerName = GetPlayerName(src)
+    local money = exports.ox_inventory:GetItem(src, 'money')
+    if not money or money.count < upgradeCost then
+        TriggerClientEvent('ox_lib:notify', src, {type = 'error', description = 'Insufficient funds for this upgrade!'})
+        return
+    end
+
+    local warehouse = MySQL.query.await('SELECT `max_slots`, `max_weight` FROM `warehouses` WHERE `warehouse_id` = ?', {warehouseId})
+    if not warehouse[1] then
+        TriggerClientEvent('ox_lib:notify', src, {type = 'error', description = 'Warehouse not found!'})
+        return
+    end
+
+    local currentSlots = warehouse[1].max_slots
+    local currentWeight = warehouse[1].max_weight
+
+    if upgradeType == 'slots' then
+        if currentSlots + upgradeAmount > Config.stashes.maxSlots then
+            TriggerClientEvent('ox_lib:notify', src, {type = 'error', description = 'Upgrade exceeds max slots limit!'})
+            return
+        end
+        MySQL.update.await('UPDATE `warehouses` SET `max_slots` = ? WHERE `warehouse_id` = ?', {currentSlots + upgradeAmount, warehouseId})
+    elseif upgradeType == 'weight' then
+        if currentWeight + (upgradeAmount * 1000) > Config.stashes.maxWeight then
+            TriggerClientEvent('ox_lib:notify', src, {type = 'error', description = 'Upgrade exceeds max weight limit!'})
+            return
+        end
+        MySQL.update.await('UPDATE `warehouses` SET `max_weight` = ? WHERE `warehouse_id` = ?', {currentWeight + (upgradeAmount * 1000), warehouseId})
+    end
+
+    exports.ox_inventory:RemoveItem(src, 'money', upgradeCost)
+
+    exports.ox_inventory:RegisterStash('warehouse_' .. warehouseId, warehouse[1].name, currentSlots + upgradeAmount, currentWeight + (upgradeAmount * 1000), playerName)
+
+    TriggerClientEvent('ox_lib:notify', src, {type = 'success', description = 'Warehouse upgraded successfully!'})
 end)
 
 
@@ -176,21 +246,28 @@ AddEventHandler('warehouse:upgradeStash', function(warehouseId, upgradeType, upg
 
         exports.ox_inventory:RemoveItem(src, 'money', upgradeCost)
 
-        if upgradeType == "slots" then
-            MySQL.update.await('UPDATE `warehouses` SET `max_slots` = `max_slots` + ? WHERE `warehouse_id` = ?', {upgradeAmount, warehouseId})
-        elseif upgradeType == "weight" then
-            MySQL.update.await('UPDATE `warehouses` SET `max_weight` = `max_weight` + ? WHERE `warehouse_id` = ?', {upgradeAmount * 1000, warehouseId}) 
+        local warehouse = MySQL.query.await('SELECT `max_slots`, `max_weight` FROM `warehouses` WHERE `warehouse_id` = ?', {warehouseId})
+        if not warehouse[1] then
+            TriggerClientEvent('ox_lib:notify', src, {title = 'Error', description = 'Warehouse not found!', type = 'error'})
+            return
         end
 
-        local warehouse = MySQL.query.await('SELECT `name`, `max_slots`, `max_weight` FROM `warehouses` WHERE `warehouse_id` = ?', {warehouseId})
-        exports.ox_inventory:RegisterStash('warehouse_' .. warehouseId, warehouse[1].name, warehouse[1].max_slots, warehouse[1].max_weight, playerName)
+        local currentSlots, currentWeight = warehouse[1].max_slots, warehouse[1].max_weight
+        if upgradeType == "slots" then
+            local newSlots = math.min(currentSlots + upgradeAmount, Config.stashes.maxSlots)
+            MySQL.update.await('UPDATE `warehouses` SET `max_slots` = ? WHERE `warehouse_id` = ?', {newSlots, warehouseId})
+
+        elseif upgradeType == "weight" then
+            local newWeight = math.min(currentWeight + (upgradeAmount * 1000), Config.stashes.maxWeight)
+            MySQL.update.await('UPDATE `warehouses` SET `max_weight` = ? WHERE `warehouse_id` = ?', {newWeight, warehouseId})
+        end
+
+        exports.ox_inventory:RegisterStash('warehouse_' .. warehouseId, warehouse[1].name, newSlots or currentSlots, newWeight or currentWeight, playerName)
 
         TriggerClientEvent('ox_lib:notify', src, {title = 'Success', description = 'Warehouse upgraded successfully!', type = 'success'})
-
         sendToDiscord("Warehouse Upgrade", ("**Player:** %s\n**Warehouse ID:** %d\n**Discord:** %s\n**Upgrade Type:** %s\n**Upgrade Amount:** %d\n**Cost:** $%d"):format(playerName, warehouseId, mention, upgradeType, upgradeAmount, upgradeCost), 3066993)
     end)
 end)
-
 
 RegisterNetEvent('warehouse:enter')
 AddEventHandler('warehouse:enter', function(warehouseName, enteredCode, playerCoords)
@@ -329,3 +406,7 @@ AddEventHandler('warehouse:sell', function()
         TriggerEvent('warehouse:leave', src)
     end)
 end)
+
+
+
+
